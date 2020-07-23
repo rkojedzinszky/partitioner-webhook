@@ -1,0 +1,78 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: partitioner-webhook
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: partitioner-webhook:namespace-reader
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: partitioner-webhook:partitioner-webhook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: partitioner-webhook:namespace-reader
+subjects:
+- kind: ServiceAccount
+  name: partitioner-webhook
+  namespace: partitioner-webhook
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: partitioner-webhook
+  name: partitioner-webhook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: partitioner-webhook
+  template:
+    metadata:
+      labels:
+        app: partitioner-webhook
+    spec:
+      containers:
+      - image: rkojedzinszky/partitioner-webhook
+        name: partitioner-webhook
+        volumeMounts:
+        - mountPath: /tls
+          name: tls
+      securityContext:
+        runAsNonRoot: true
+      serviceAccountName: partitioner-webhook
+      volumes:
+      - name: tls
+        secret:
+          defaultMode: 420
+          secretName: partitioner-webhook-tls
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: partitioner-webhook
+  name: partitioner-webhook
+spec:
+  ports:
+  - name: https
+    port: 8443
+  selector:
+    app: partitioner-webhook

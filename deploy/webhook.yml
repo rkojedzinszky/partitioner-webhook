@@ -1,0 +1,36 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: partitioner
+webhooks:
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    caBundle: <paste certificate encoded in base64 here>
+    service:
+      name: partitioner-webhook
+      namespace: partitioner-webhook
+      path: /mutate
+      port: 8443
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: partitioner.kojedz.in
+  namespaceSelector:
+    matchLabels:
+      partitioner: "true"
+  objectSelector: {}
+  reinvocationPolicy: Never
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - pods
+    scope: Namespaced
+  sideEffects: None
+  timeoutSeconds: 10
